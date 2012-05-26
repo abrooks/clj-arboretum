@@ -10,10 +10,10 @@
 (defn leaves
   "Climb a tree of nested associative data structures, returning their
   leaf nodes in as tuples of vector-of-path-elements and value. e.g.:
-  (leaves {:a {:b {:c 1 :d 2}}})
+  (leaves {:a {:b {:c 1 :d [2 3]}}}) =>
   '([[:a :b :c] 1]
-    [[:a :b :d] 2]
-    ...) "
+    [[:a :b :d 0] 2]
+    [[:a :b :d 1] 3])"
   [roots & [so-far]]
   (if (associative? roots)
     (for [[trunk branches] (cond (map? roots) roots
