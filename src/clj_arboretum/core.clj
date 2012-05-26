@@ -35,8 +35,11 @@
           nbranches (when nbranches
                       (with-meta nbranches {:subtrees m-nbranches}))
           roots (or roots (empty m-trunk))
-          nroots (get roots trunk)]
-      (assoc roots trunk (grow nroots [nbranches leaf])))
+          nroots (get roots trunk)
+          subtree (grow nroots [nbranches leaf])]
+      (if (vector? roots)
+        (conj roots subtree)
+        (assoc roots trunk subtree)))
     leaf))
 
 (defn tree
