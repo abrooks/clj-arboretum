@@ -1,9 +1,14 @@
 (ns clj-arboretum.core)
 
+(def ^:private DNE (Object.))
+
+(def ^:private ^:dynamic *vect-locs* nil)
+
+(def vconj (fnil conj []))
+
 (defn- climb
   [so-far branch roots]
-  (let [m-so-far (:subtrees (meta so-far))
-        vconj (fnil conj [])]
+  (let [m-so-far (:subtrees (meta so-far))]
     (with-meta (vconj so-far branch)
       {:subtrees (vconj m-so-far roots)} )))
 
@@ -27,29 +32,47 @@
   [e roots leaves]
   (throw e))
 
+(defn- handle-vect
+  [roots subtree so-far]
+  (when (= [] roots)
+    (swap! *vect-locs* conj so-far))
+  )
+
 (defn- grow
-  [roots [branches leaf]]
-  (if branches
-    (let [[trunk & nbranches] branches
-          [m-trunk & m-nbranches] (:subtrees (meta branches))
+  [tree [path leaf] & [so-far]]
+  (if path
+    (let [[trunk & nbranches] path
+          [meta-trunk & meta-nbranches] (:subtrees (meta path))
           nbranches (when nbranches
-                      (with-meta nbranches {:subtrees m-nbranches}))
-          roots (or roots (empty m-trunk))
-          nroots (get roots trunk)
-          subtree (grow nroots [nbranches leaf])]
-      (if (vector? roots)
-        (conj roots subtree)
-        (assoc roots trunk subtree)))
+                      (with-meta nbranches {:subtrees meta-nbranches}))
+          tree (or tree (empty meta-trunk))
+          more-tree (get tree trunk)
+          so-far (vconj so-far trunk)
+          subtree (grow more-tree [nbranches leaf] so-far)]
+      (if (vector? tree)
+        (handle-vect tree subtree so-far)
+        (assoc tree trunk subtree)))
     leaf))
+
+(defn- dead-wood
+  [[roots vects]]
+  (if (seq vects)
+    (let []
+        (recur after cleanup))
+    root))
 
 (defn tree
   ([leaves] (tree nil leaves))
   ([roots leaves]
-     (try-debug mulch
-       (loop [roots roots leaves leaves]
-         (if (seq leaves)
-           (let [roots (grow roots (first leaves))]
-             (recur roots (rest leaves)))
-           roots)))))
+     (try
+       (->
+        (loop [roots roots leaves leaves vects #{}]
+          (if (seq leaves)
+            (let [roots (grow roots (first leaves))]
+              (recur roots (rest leaves)))
+            [roots vects]))
+        (dead-wood))
+       (catch Exception e
+         (mulch e roots leaves)))))
 
 
